@@ -1,17 +1,42 @@
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import {KeyboardAvoidingView, StyleSheet, Platform} from 'react-native';
 import {SafeAreaProvider, SafeAreaView} from 'react-native-safe-area-context';
 import AppTodo from './components/AppTodo';
 import DateHead from './components/DateHead';
 import Empty from './components/Empty';
 import TodoList from './components/TodoList';
+import AsyncStorage from '@react-native-community/async-storage';
 
-function App(props) {
+function App() {
   const [todos, setTodos] = useState([
     {id: 1, text: '작업환경 설정', done: true},
     {id: 2, text: '리액트 네이티브 기초 공부', done: false},
     {id: 3, text: '투두리스트 만들어보기', done: false},
   ]);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const rawTodos = await AsyncStorage.getItem('todos');
+        const savedTodos = JSON.parse(rawTodos);
+        setTodos(savedTodos);
+      } catch (e) {
+        console.log('Failed to load todos');
+      }
+    }
+    load();
+  }, []);
+
+  useEffect(() => {
+    async function save() {
+      try {
+        await AsyncStorage.setItem('todos', JSON.stringify(todos));
+      } catch (e) {
+        console.log('Failed to save todos');
+      }
+    }
+    save();
+  }, [todos]);
   const onInsert = text => {
     const nextId =
       todos.length > 0 ? Math.max(...todos.map(todo => todo.id)) + 1 : 1;
@@ -25,6 +50,11 @@ function App(props) {
     );
     setTodos(nextTodos);
   };
+
+  const onRemove = id => {
+    const nextTodos = todos.filter(todo => todo.id !== id);
+    setTodos(nextTodos);
+  };
   return (
     <SafeAreaProvider>
       <SafeAreaView edges={['bottom']} style={styles.block}>
@@ -35,7 +65,7 @@ function App(props) {
           {todos.length === 0 ? (
             <Empty />
           ) : (
-            <TodoList todos={todos} onToggle={onToggle} />
+            <TodoList todos={todos} onToggle={onToggle} onRemove={onRemove} />
           )}
           <AppTodo onInsert={onInsert} />
         </KeyboardAvoidingView>
